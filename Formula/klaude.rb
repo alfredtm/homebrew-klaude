@@ -80,7 +80,7 @@ class Klaude < Formula
       echo -e "${G}Starting container...${N}"
       echo ""
       
-      # Run Claude with persistent auth
+      # Run Claude with persistent auth (containerized YOLO mode)
       docker run -it --rm \\
           --name "klaude-${PROJECT_NAME//[^a-zA-Z0-9]/-}-$$" \\
           --hostname "klaude" \\
@@ -93,9 +93,10 @@ class Klaude < Formula
               echo '📝 Note: On first run, Claude will open a browser for login'
               echo '   Your auth will be saved for future sessions'
               echo ''
-              echo '✅ Container ready! Starting Claude Code in YOLO mode...'
+              echo '✅ Container ready! Starting Claude Code in containerized YOLO mode...'
+              echo '    (Claude has full access to the mounted workspace)'
               echo ''
-              claude --dangerously-skip-permissions
+              claude
           "
       
       echo -e "${G}✨ Session ended. Project intact at: $WORKSPACE${N}"
