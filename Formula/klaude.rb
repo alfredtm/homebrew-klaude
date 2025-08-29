@@ -89,12 +89,15 @@ class Klaude < Formula
           --privileged \\
           --user "$USER_ID:$GROUP_ID" \\
           -v "$WORKSPACE":/workspace \\
-          -v "$CLAUDE_AUTH_DIR":/tmp/.config \\
+          -v "$CLAUDE_AUTH_DIR":/home/klaude/.config \\
           -w /workspace \\
-          -e HOME=/tmp \\
+          -e HOME=/home/klaude \\
           -e PATH=/usr/local/bin:/usr/bin:/bin \\
           klaude-image \\
           bash -c "
+              # Ensure home directory exists and is writable
+              mkdir -p /home/klaude/.config
+              
               echo '📝 Note: On first run, Claude will open a browser for login'
               echo '   Your auth will be saved for future sessions'
               echo ''
