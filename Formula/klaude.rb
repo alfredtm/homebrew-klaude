@@ -96,7 +96,8 @@ class Klaude < Formula
           klaude-image \\
           bash -c "
               # Ensure home directory exists and is writable
-              mkdir -p /home/klaude/.config
+              sudo mkdir -p /home/klaude/.config
+              sudo chown -R $USER_ID:$GROUP_ID /home/klaude
               
               echo '📝 Note: On first run, Claude will open a browser for login'
               echo '   Your auth will be saved for future sessions'
