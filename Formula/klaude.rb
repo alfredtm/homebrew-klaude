@@ -94,32 +94,32 @@ class Klaude < Formula
           -w /workspace \\
           -e PATH=/usr/local/bin:/usr/bin:/bin \\
           klaude-image \\
-          bash -c "
+          bash -c \"
               # Create home directory structure as root first
               mkdir -p /home/klaude
               chown -R $USER_ID:$GROUP_ID /home/klaude
               
               # Switch to the target user for Claude execution
-              exec su -s /bin/bash -c '
+              exec su -s /bin/bash -c \\\"
                   export HOME=/home/klaude
                   cd /workspace
                   
-                  echo \"📝 Note: On first run, Claude will open a browser for login\"
-                  echo \"   Your auth will be saved for future sessions\"
-                  echo \"\"
-                  echo \"✅ Container ready! Starting Claude Code in YOLO mode...\"
-                  echo \"    (Using --dangerously-skip-permissions safely in container)\"
-                  echo \"\"
+                  echo \\\\\\\"📝 Note: On first run, Claude will open a browser for login\\\\\\\"
+                  echo \\\\\\\"   Your auth will be saved for future sessions\\\\\\\"
+                  echo \\\\\\\"\\\\\\\"
+                  echo \\\\\\\"✅ Container ready! Starting Claude Code in YOLO mode...\\\\\\\"
+                  echo \\\\\\\"    (Using --dangerously-skip-permissions safely in container)\\\\\\\"
+                  echo \\\\\\\"\\\\\\\"
                   
                   # Check if claude command exists
                   if ! command -v claude &> /dev/null; then
-                      echo \"❌ Claude CLI not found in container\"
-                      echo \"Please ensure the Docker image includes Claude Code\"
+                      echo \\\\\\\"❌ Claude CLI not found in container\\\\\\\"
+                      echo \\\\\\\"Please ensure the Docker image includes Claude Code\\\\\\\"
                       exit 1
                   fi
                   claude --dangerously-skip-permissions
-              ' - $USER_ID
-          "
+              \\\" - $USER_ID
+          \"
       
       echo -e "${G}✨ Session ended. Project intact at: $WORKSPACE${N}"
     EOS
