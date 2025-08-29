@@ -93,9 +93,9 @@ class Klaude < Formula
               echo '📝 Note: On first run, Claude will open a browser for login'
               echo '   Your auth will be saved for future sessions'
               echo ''
-              echo '✅ Container ready! Starting Claude Code...'
+              echo '✅ Container ready! Starting Claude Code in YOLO mode...'
               echo ''
-              claude
+              claude --dangerously-skip-permissions
           "
       
       echo -e "${G}✨ Session ended. Project intact at: $WORKSPACE${N}"
