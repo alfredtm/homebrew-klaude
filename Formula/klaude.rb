@@ -3,9 +3,9 @@ class Klaude < Formula
   homepage "https://github.com/alfredtm/klaude"
   version "1.0.0"
   
-  # Using GitHub Pages URL for Homebrew requirement, but we embed all code in this formula
-  url "https://alfredtm.github.io/homebrew-klaude/"
-  sha256 "70d613e3acfba24fd2876fcbacaf639e1e111ef4d54baf70761c47673f37d6a3"
+  # Using Google robots.txt as dummy URL since Homebrew requires one, but we embed all code in this formula
+  url "https://www.google.com/robots.txt"
+  sha256 "08b39f388199b56f32a048424ae0055f8ad0b86f1cd8d1de2c171bb02e880403"
   
   depends_on "docker"
 
