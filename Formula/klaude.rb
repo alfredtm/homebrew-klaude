@@ -5,7 +5,7 @@ class Klaude < Formula
   
   # Using klaude.ai as URL since Homebrew requires one, but we embed all code in this formula
   url "https://klaude.ai"
-  sha256 "87a9323ac85ce28867d5d7ce590c8f29b8d1a999961fca71bb33adef48683691"
+  sha256 "52514d8d7dbd3e2645f4b6c05f2d59104c10b5630824d7102483074fd8067467"
   
   depends_on "docker"
 
