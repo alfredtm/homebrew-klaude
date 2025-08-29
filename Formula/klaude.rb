@@ -81,15 +81,18 @@ class Klaude < Formula
       echo ""
       
       # Run Claude with persistent auth as non-root user for YOLO mode
+      USER_ID=$(id -u)
+      GROUP_ID=$(id -g)
       docker run -it --rm \\
           --name "klaude-${PROJECT_NAME//[^a-zA-Z0-9]/-}-$$" \\
           --hostname "klaude" \\
           --privileged \\
-          --user "1000:1000" \\
+          --user "$USER_ID:$GROUP_ID" \\
           -v "$WORKSPACE":/workspace \\
-          -v "$CLAUDE_AUTH_DIR":/home/claude/.config \\
+          -v "$CLAUDE_AUTH_DIR":/tmp/.config \\
           -w /workspace \\
-          -e HOME=/home/claude \\
+          -e HOME=/tmp \\
+          -e PATH=/usr/local/bin:/usr/bin:/bin \\
           klaude-image \\
           bash -c "
               echo '📝 Note: On first run, Claude will open a browser for login'
@@ -98,6 +101,12 @@ class Klaude < Formula
               echo '✅ Container ready! Starting Claude Code in YOLO mode...'
               echo '    (Using --dangerously-skip-permissions safely in container)'
               echo ''
+              # Check if claude command exists
+              if ! command -v claude &> /dev/null; then
+                  echo '❌ Claude CLI not found in container'
+                  echo 'Please ensure the Docker image includes Claude Code'
+                  exit 1
+              fi
               claude --dangerously-skip-permissions
           "
       
