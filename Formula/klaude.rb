@@ -115,12 +115,6 @@ class Klaude < Formula
                   
                   echo '🔑 Using mounted host Claude authentication'
                   
-                  # Remove any existing invalid .claude.json that might cause parsing errors
-                  if [ -f /home/claude/.config/claude/.claude.json ]; then
-                      rm -f /home/claude/.config/claude/.claude.json
-                      echo '🔧 Removed potentially invalid .claude.json file'
-                  fi
-                  
                   # Fix ownership of mounted auth files for claude user
                   chown -R claude:claude /home/claude/.config/claude
                   
