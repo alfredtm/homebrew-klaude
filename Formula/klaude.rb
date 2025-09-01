@@ -115,7 +115,7 @@ class Klaude < Formula
                   # Give claude user access to the workspace
                   chown -R claude:claude /workspace
                   
-                  echo '🔑 Using host Claude authentication with persistence'
+                  echo '🔑 Using host Claude authentication'
                   
                   # Set up proper environment for Claude
                   export HOME=/home/claude
@@ -207,7 +207,8 @@ class Klaude < Formula
       1. Make sure Docker Desktop is running
       2. Run 'klaude' in any project directory
       3. Image will be automatically pulled from GitHub Container Registry
-      4. Login with your Claude Pro/Max subscription when prompted (required each session)
+      4. Login with your Claude Pro/Max subscription when prompted
+         (Note: Login is required each session - auth persistence in containers is complex)
       
       #{Formatter.headline("Important:")}
       ⚠️  Klaude runs in YOLO mode - Claude has full access to the mounted directory!
