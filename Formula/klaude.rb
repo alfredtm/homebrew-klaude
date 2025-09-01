@@ -104,7 +104,7 @@ class Klaude < Formula
               --hostname "klaude" \\
               --privileged \\
               -v "$WORKSPACE":/workspace \\
-              -v "$CLAUDE_AUTH_SOURCE":/home/claude/.config/claude:ro \\
+              -v "$CLAUDE_AUTH_SOURCE":/home/claude/.config/claude \\
               -w /workspace \\
               -e PATH=/usr/local/bin:/usr/bin:/bin \\
               klaude-image \\
@@ -113,6 +113,8 @@ class Klaude < Formula
                   chown -R claude:claude /workspace
                   
                   echo '🔑 Using mounted host Claude authentication'
+                  # Fix ownership of mounted auth files for claude user
+                  chown -R claude:claude /home/claude/.config/claude
                   # Ensure .config directory exists and has proper ownership
                   mkdir -p /home/claude/.config
                   chown claude:claude /home/claude/.config
