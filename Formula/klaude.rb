@@ -95,13 +95,16 @@ class Klaude < Formula
           -e PATH=/usr/local/bin:/usr/bin:/bin \\
           klaude-image \\
           bash -c \"
-              # Create user with host UID/GID
-              groupadd -g $GROUP_ID klaudegroup 2>/dev/null || true
-              useradd -u $USER_ID -g $GROUP_ID -M -s /bin/bash klaudeuser 2>/dev/null || true
+              # Create user with host UID/GID - force creation
+              groupadd -f -g $GROUP_ID klaudegroup
+              useradd -u $USER_ID -g $GROUP_ID -m -d /home/klaudeuser -s /bin/bash klaudeuser || {
+                  # If user exists, just continue
+                  echo 'User setup...'
+              }
               
               # Ensure config directory is accessible
               mkdir -p /home/klaude/.config
-              chown -R $USER_ID:$GROUP_ID /home/klaude/.config 2>/dev/null || true
+              chown -R $USER_ID:$GROUP_ID /home/klaude/.config
               
               echo '📝 Note: On first run, Claude will open a browser for login'
               echo '   Your auth will be saved for future sessions'
@@ -117,8 +120,14 @@ class Klaude < Formula
                   exit 1
               fi
               
-              # Use su without login shell to run as non-root user
-              exec su klaudeuser -s /bin/bash -c 'cd /workspace && HOME=/home/klaude claude --dangerously-skip-permissions'
+              # Verify user exists before switching
+              if ! id klaudeuser >/dev/null 2>&1; then
+                  echo '❌ Failed to create user. Running claude as root (without --dangerously-skip-permissions)'
+                  cd /workspace && HOME=/home/klaude exec claude
+              else
+                  # Use su to run as non-root user
+                  exec su klaudeuser -c 'cd /workspace && HOME=/home/klaude exec claude --dangerously-skip-permissions'
+              fi
           \"
       
       echo -e "${G}✨ Session ended. Project intact at: $WORKSPACE${N}"
