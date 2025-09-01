@@ -33,6 +33,19 @@ Klaude runs Claude Code in Docker with full access to your project files. Safe c
 ✅ **Safe Isolation** - Your host system stays protected  
 ✅ **Auto Updates** - Always pulls latest Claude Code  
 ✅ **Easy Cleanup** - Disposable containers
+✅ **1Password Integration** - Auto-inject GitHub tokens & kubectl configs
+
+## 1Password Integration (Optional)
+
+Auto-inject credentials into Klaude container:
+
+1. Tag your 1Password items with `klaude`:
+   - GitHub token (include "github" in title)
+   - Kubectl config document (include "kube" in title)
+2. Sign in: `op signin`
+3. Run `klaude` - credentials auto-injected!
+
+Disable with: `KLAUDE_NO_1PASSWORD=true klaude`
 
 ## ⚠️ Important
 
