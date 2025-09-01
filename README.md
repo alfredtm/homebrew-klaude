@@ -41,7 +41,6 @@ Klaude runs in YOLO mode - Claude has **full access** to the mounted directory! 
 ## Links
 
 - 🐙 [Main Repository](https://github.com/alfredtm/klaude)
-- 📖 [Documentation](https://alfredtm.github.io/homebrew-klaude/)
 - 🚀 [Docker Images](https://github.com/alfredtm/klaude/pkgs/container/klaude)
 
 ---
