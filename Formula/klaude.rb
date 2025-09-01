@@ -93,32 +93,42 @@ class Klaude < Formula
           -v "$CLAUDE_AUTH_DIR":/home/klaude/.config \\
           -w /workspace \\
           -e PATH=/usr/local/bin:/usr/bin:/bin \\
+          -e USER_ID=$USER_ID \\
+          -e GROUP_ID=$GROUP_ID \\
           klaude-image \\
           bash -c \"
-              # Create home directory structure as root first
+              # Create home directory structure and user as root first
               mkdir -p /home/klaude
-              chown -R $USER_ID:$GROUP_ID /home/klaude
               
-              # Switch to the target user for Claude execution
-              exec su -s /bin/bash -c \\\"
+              # Create a user with the host's UID/GID if it doesn't exist
+              if ! id -u klaude-user >/dev/null 2>&1; then
+                  groupadd -g \$GROUP_ID klaude-group 2>/dev/null || true
+                  useradd -u \$USER_ID -g \$GROUP_ID -d /home/klaude -s /bin/bash klaude-user 2>/dev/null || true
+              fi
+              
+              # Set proper ownership
+              chown -R \$USER_ID:\$GROUP_ID /home/klaude
+              
+              # Switch to the created user for Claude execution
+              exec su -s /bin/bash klaude-user -c \\\"
                   export HOME=/home/klaude
                   cd /workspace
                   
-                  echo \\\\\\\"📝 Note: On first run, Claude will open a browser for login\\\\\\\"
-                  echo \\\\\\\"   Your auth will be saved for future sessions\\\\\\\"
-                  echo \\\\\\\"\\\\\\\"
-                  echo \\\\\\\"✅ Container ready! Starting Claude Code in YOLO mode...\\\\\\\"
-                  echo \\\\\\\"    (Using --dangerously-skip-permissions safely in container)\\\\\\\"
-                  echo \\\\\\\"\\\\\\\"
+                  echo '📝 Note: On first run, Claude will open a browser for login'
+                  echo '   Your auth will be saved for future sessions'
+                  echo ''
+                  echo '✅ Container ready! Starting Claude Code in YOLO mode...'
+                  echo '    (Using --dangerously-skip-permissions safely in container)'
+                  echo ''
                   
                   # Check if claude command exists
                   if ! command -v claude &> /dev/null; then
-                      echo \\\\\\\"❌ Claude CLI not found in container\\\\\\\"
-                      echo \\\\\\\"Please ensure the Docker image includes Claude Code\\\\\\\"
+                      echo '❌ Claude CLI not found in container'
+                      echo 'Please ensure the Docker image includes Claude Code'
                       exit 1
                   fi
                   claude --dangerously-skip-permissions
-              \\\" - $USER_ID
+              \\\"
           \"
       
       echo -e "${G}✨ Session ended. Project intact at: $WORKSPACE${N}"
