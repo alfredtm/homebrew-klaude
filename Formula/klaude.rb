@@ -73,7 +73,7 @@ class Klaude < Formula
       # Mark new session
       echo "$(date '+%Y-%m-%d %H:%M')" > "$WORKSPACE/.klaude-session"
       
-      # Create persistent auth directory
+      # Create persistent auth directory  
       CLAUDE_AUTH_DIR="$HOME/.klaude-docker-auth"
       mkdir -p "$CLAUDE_AUTH_DIR"
       
@@ -90,21 +90,20 @@ class Klaude < Formula
           --hostname "klaude" \\
           --privileged \\
           -v "$WORKSPACE":/workspace \\
-          -v "$CLAUDE_AUTH_DIR":/home/klaude/.config \\
+          -v "$CLAUDE_AUTH_DIR":/home/claude/.config \\
           -w /workspace \\
           -e PATH=/usr/local/bin:/usr/bin:/bin \\
           klaude-image \\
           bash -c \"
-              # Create user with host UID/GID - force creation
-              groupadd -f -g $GROUP_ID klaudegroup
-              useradd -u $USER_ID -g $GROUP_ID -m -d /home/klaudeuser -s /bin/bash klaudeuser || {
-                  # If user exists, just continue
-                  echo 'User setup...'
-              }
+              # The container already has a 'claude' user (UID 1000, GID 1000)
+              # We need to adjust permissions for the mounted directories
               
-              # Ensure config directory is accessible
-              mkdir -p /home/klaude/.config
-              chown -R $USER_ID:$GROUP_ID /home/klaude/.config
+              # Ensure config directory is accessible to the claude user
+              mkdir -p /home/claude/.config
+              chown -R claude:claude /home/claude/.config
+              
+              # Give claude user access to the workspace
+              chown -R claude:claude /workspace
               
               echo '📝 Note: On first run, Claude will open a browser for login'
               echo '   Your auth will be saved for future sessions'
@@ -113,21 +112,8 @@ class Klaude < Formula
               echo '    (Using --dangerously-skip-permissions safely in container)'
               echo ''
               
-              # Check if claude command exists
-              if ! command -v claude &> /dev/null; then
-                  echo '❌ Claude CLI not found in container'
-                  echo 'Please ensure the Docker image includes Claude Code'
-                  exit 1
-              fi
-              
-              # Verify user exists before switching
-              if ! id klaudeuser >/dev/null 2>&1; then
-                  echo '❌ Failed to create user. Running claude as root (without --dangerously-skip-permissions)'
-                  cd /workspace && HOME=/home/klaude exec claude
-              else
-                  # Use su to run as non-root user
-                  exec su klaudeuser -c 'cd /workspace && HOME=/home/klaude exec claude --dangerously-skip-permissions'
-              fi
+              # Run as the existing claude user (non-root)
+              exec su claude -c 'cd /workspace && claude --dangerously-skip-permissions'
           \"
       
       echo -e "${G}✨ Session ended. Project intact at: $WORKSPACE${N}"
