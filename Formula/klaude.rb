@@ -104,7 +104,7 @@ class Klaude < Formula
               --hostname "klaude" \\
               --privileged \\
               -v "$WORKSPACE":/workspace \\
-              -v "$CLAUDE_AUTH_SOURCE":/home/claude/.config/claude \\
+              -v "$CLAUDE_AUTH_SOURCE":/tmp/host-claude-auth \\
               -w /workspace \\
               -e PATH=/usr/local/bin:/usr/bin:/bin \\
               -e CLAUDE_CONFIG_DIR=/home/claude/.config/claude \\
@@ -113,24 +113,25 @@ class Klaude < Formula
                   # Give claude user access to the workspace
                   chown -R claude:claude /workspace
                   
-                  echo '🔑 Using mounted host Claude authentication'
+                  echo '🔑 Copying host Claude authentication to container'
                   
-                  # Fix ownership of mounted auth files for claude user
-                  chown -R claude:claude /home/claude/.config/claude
-                  
-                  # Copy key auth files to ensure proper permissions (GitHub issue #1736 approach)
-                  if [ -f /home/claude/.config/claude/.credentials.json ]; then
-                      cp /home/claude/.config/claude/.credentials.json /tmp/credentials.json.bak
-                      chown claude:claude /tmp/credentials.json.bak
-                      cp /tmp/credentials.json.bak /home/claude/.config/claude/.credentials.json
-                  fi
-                  
-                  # Ensure all mounted files have correct permissions
-                  chmod -R 755 /home/claude/.config/claude
-                  
-                  # Ensure .config directory exists and has proper ownership
-                  mkdir -p /home/claude/.config
+                  # Create the target auth directory with proper ownership
+                  mkdir -p /home/claude/.config/claude
                   chown claude:claude /home/claude/.config
+                  chown claude:claude /home/claude/.config/claude
+                  
+                  # Copy all auth files from host mount to proper location
+                  if [ -d /tmp/host-claude-auth ] && [ \\\"\\$(ls -A /tmp/host-claude-auth 2>/dev/null)\\\" ]; then
+                      cp -r /tmp/host-claude-auth/* /home/claude/.config/claude/ 2>/dev/null || true
+                      # Fix ownership of copied files
+                      chown -R claude:claude /home/claude/.config/claude
+                      # Set proper permissions
+                      chmod -R 600 /home/claude/.config/claude/*
+                      chmod 755 /home/claude/.config/claude
+                      echo '   ✓ Auth files copied and permissions set'
+                  else
+                      echo '   ⚠️ No auth files found to copy'
+                  fi
                   
                   echo '✅ Container ready! Starting Claude Code in YOLO mode...'
                   echo '    (Using --dangerously-skip-permissions safely in container)'
