@@ -80,13 +80,18 @@ class Klaude < Formula
       USER_ID=$(id -u)
       GROUP_ID=$(id -g)
       
-      # Check if user has local Claude auth (expand path explicitly)
-      CLAUDE_AUTH_DIR="$HOME/.config/claude"
-      if [ -d "$CLAUDE_AUTH_DIR" ] && [ "$(ls -A "$CLAUDE_AUTH_DIR" 2>/dev/null)" ]; then
-          echo -e "${G}🔑 Found local Claude auth, mounting to container${N}"
-          CLAUDE_AUTH_MOUNT="-v '$CLAUDE_AUTH_DIR':/home/claude/.config/claude:ro"
+      # Check for Claude auth in macOS location first, then fallback to Linux location
+      CLAUDE_AUTH_DIR_MACOS="$HOME/Library/Application Support/Claude"
+      CLAUDE_AUTH_DIR_LINUX="$HOME/.config/claude"
+      
+      if [ -d "$CLAUDE_AUTH_DIR_MACOS" ] && [ "$(ls -A "$CLAUDE_AUTH_DIR_MACOS" 2>/dev/null)" ]; then
+          echo -e "${G}🔑 Found local Claude auth (macOS), mounting to container${N}"
+          CLAUDE_AUTH_MOUNT="-v '$CLAUDE_AUTH_DIR_MACOS':/home/claude/.config/claude:ro"
+      elif [ -d "$CLAUDE_AUTH_DIR_LINUX" ] && [ "$(ls -A "$CLAUDE_AUTH_DIR_LINUX" 2>/dev/null)" ]; then
+          echo -e "${G}🔑 Found local Claude auth (Linux), mounting to container${N}"
+          CLAUDE_AUTH_MOUNT="-v '$CLAUDE_AUTH_DIR_LINUX':/home/claude/.config/claude:ro"
       else
-          echo -e "${Y}⚠️  No local Claude auth found (or empty), will need to login in container${N}"
+          echo -e "${Y}⚠️  No local Claude auth found, will need to login in container${N}"
           CLAUDE_AUTH_MOUNT=""
       fi
       
