@@ -84,7 +84,7 @@ class Klaude < Formula
       USER_ID=$(id -u)
       GROUP_ID=$(id -g)
       
-      # Run container as root initially to set up, then drop to user for claude
+      # Run container as root initially to set up, then drop privileges for claude
       docker run -it --rm \\
           --name "klaude-${PROJECT_NAME//[^a-zA-Z0-9]/-}-$$" \\
           --hostname "klaude" \\
@@ -95,38 +95,29 @@ class Klaude < Formula
           -e PATH=/usr/local/bin:/usr/bin:/bin \\
           klaude-image \\
           bash -c \"
-              # Create a non-root user inside container matching host UID/GID
-              groupadd -g $GROUP_ID hostgroup 2>/dev/null || true
-              useradd -m -u $USER_ID -g $GROUP_ID -s /bin/bash hostuser 2>/dev/null || true
-              
-              # Ensure the home directory and config are owned by the user
-              mkdir -p /home/hostuser
-              chown -R $USER_ID:$GROUP_ID /home/hostuser
+              # Ensure config directory is accessible
+              mkdir -p /home/klaude/.config
               chown -R $USER_ID:$GROUP_ID /home/klaude/.config 2>/dev/null || true
               
-              # Drop to non-root user to run claude
-              su - hostuser -c \\\"
-                  export HOME=/home/hostuser
-                  export PATH=/usr/local/bin:/usr/bin:/bin
-                  cd /workspace
-                  
-                  echo '📝 Note: On first run, Claude will open a browser for login'
-                  echo '   Your auth will be saved for future sessions'
-                  echo ''
-                  echo '✅ Container ready! Starting Claude Code in YOLO mode...'
-                  echo '    (Using --dangerously-skip-permissions safely in container)'
-                  echo ''
-                  
-                  # Check if claude command exists
-                  if ! command -v claude &> /dev/null; then
-                      echo '❌ Claude CLI not found in container'
-                      echo 'Please ensure the Docker image includes Claude Code'
-                      exit 1
-                  fi
-                  
-                  # Run claude with the skip permissions flag
+              echo '📝 Note: On first run, Claude will open a browser for login'
+              echo '   Your auth will be saved for future sessions'
+              echo ''
+              echo '✅ Container ready! Starting Claude Code in YOLO mode...'
+              echo '    (Using --dangerously-skip-permissions safely in container)'
+              echo ''
+              
+              # Check if claude command exists
+              if ! command -v claude &> /dev/null; then
+                  echo '❌ Claude CLI not found in container'
+                  echo 'Please ensure the Docker image includes Claude Code'
+                  exit 1
+              fi
+              
+              # Use setpriv to drop to non-root for claude execution
+              # This avoids the need for creating users
+              exec setpriv --reuid=$USER_ID --regid=$GROUP_ID --init-groups \\
+                  env HOME=/home/klaude \\
                   claude --dangerously-skip-permissions
-              \\\"
           \"
       
       echo -e "${G}✨ Session ended. Project intact at: $WORKSPACE${N}"
