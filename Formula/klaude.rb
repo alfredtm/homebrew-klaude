@@ -121,12 +121,12 @@ class Klaude < Formula
                   chown claude:claude /home/claude/.config/claude
                   
                   # Copy all auth files from host mount to proper location
-                  if [ -d /tmp/host-claude-auth ] && [ \\\"\\$(ls -A /tmp/host-claude-auth 2>/dev/null)\\\" ]; then
+                  if [ -d /tmp/host-claude-auth ]; then
                       cp -r /tmp/host-claude-auth/* /home/claude/.config/claude/ 2>/dev/null || true
                       # Fix ownership of copied files
                       chown -R claude:claude /home/claude/.config/claude
                       # Set proper permissions
-                      chmod -R 600 /home/claude/.config/claude/*
+                      chmod -R 600 /home/claude/.config/claude/* 2>/dev/null || true
                       chmod 755 /home/claude/.config/claude
                       echo '   ✓ Auth files copied and permissions set'
                   else
