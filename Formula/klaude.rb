@@ -128,24 +128,7 @@ class Klaude < Formula
               echo ''
               
               # Run as the existing claude user with proper HOME set
-              # Explicitly set HOME to ensure Claude finds the auth files
-              exec su claude -c \"
-                  export HOME=/home/claude
-                  echo '🔍 Debug: HOME='\\\$HOME
-                  if [ -d /home/claude/.claude ]; then
-                      echo '🔍 Auth directory exists'
-                      echo '🔍 Auth files:' \\\$(ls -la /home/claude/.claude/ 2>/dev/null | wc -l) 'files found'
-                      if [ -f /home/claude/.claude/.credentials.json ]; then
-                          echo '🔑 Credentials file found'
-                      else
-                          echo '❌ No credentials file found'
-                      fi
-                  else
-                      echo '❌ Auth directory /home/claude/.claude does not exist'
-                  fi
-                  cd /workspace
-                  claude --dangerously-skip-permissions
-              \"
+              exec su claude -c 'HOME=/home/claude && cd /workspace && claude --dangerously-skip-permissions'
           \"
       
       echo -e "${G}✨ Session ended. Project intact at: $WORKSPACE${N}"
