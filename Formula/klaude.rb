@@ -86,26 +86,40 @@ class Klaude < Formula
       
       if [ -d "$CLAUDE_AUTH_DIR_MACOS" ] && [ "$(ls -A "$CLAUDE_AUTH_DIR_MACOS" 2>/dev/null)" ]; then
           echo -e "${G}🔑 Found local Claude auth (macOS), mounting to container${N}"
-          CLAUDE_AUTH_MOUNT="-v \"$CLAUDE_AUTH_DIR_MACOS\":/home/claude/.config/claude:ro"
+          CLAUDE_AUTH_SOURCE="$CLAUDE_AUTH_DIR_MACOS"
+          HAS_AUTH=true
       elif [ -d "$CLAUDE_AUTH_DIR_LINUX" ] && [ "$(ls -A "$CLAUDE_AUTH_DIR_LINUX" 2>/dev/null)" ]; then
           echo -e "${G}🔑 Found local Claude auth (Linux), mounting to container${N}"
-          CLAUDE_AUTH_MOUNT="-v \"$CLAUDE_AUTH_DIR_LINUX\":/home/claude/.config/claude:ro"
+          CLAUDE_AUTH_SOURCE="$CLAUDE_AUTH_DIR_LINUX"
+          HAS_AUTH=true
       else
           echo -e "${Y}⚠️  No local Claude auth found, will need to login in container${N}"
-          CLAUDE_AUTH_MOUNT=""
+          HAS_AUTH=false
       fi
       
       # Run container as root initially to set up, then drop privileges for claude
-      docker run -it --rm \\
-          --name "klaude-${PROJECT_NAME//[^a-zA-Z0-9]/-}-$$" \\
-          --hostname "klaude" \\
-          --privileged \\
-          -v "$WORKSPACE":/workspace \\
-          $CLAUDE_AUTH_MOUNT \\
-          -w /workspace \\
-          -e PATH=/usr/local/bin:/usr/bin:/bin \\
-          klaude-image \\
-          bash -c \"
+      if [ "$HAS_AUTH" = true ]; then
+          docker run -it --rm \\
+              --name "klaude-${PROJECT_NAME//[^a-zA-Z0-9]/-}-$$" \\
+              --hostname "klaude" \\
+              --privileged \\
+              -v "$WORKSPACE":/workspace \\
+              -v "$CLAUDE_AUTH_SOURCE":/home/claude/.config/claude:ro \\
+              -w /workspace \\
+              -e PATH=/usr/local/bin:/usr/bin:/bin \\
+              klaude-image \\
+              bash -c \"
+      else
+          docker run -it --rm \\
+              --name "klaude-${PROJECT_NAME//[^a-zA-Z0-9]/-}-$$" \\
+              --hostname "klaude" \\
+              --privileged \\
+              -v "$WORKSPACE":/workspace \\
+              -w /workspace \\
+              -e PATH=/usr/local/bin:/usr/bin:/bin \\
+              klaude-image \\
+              bash -c \"
+      fi
               # Give claude user access to the workspace
               chown -R claude:claude /workspace
               
