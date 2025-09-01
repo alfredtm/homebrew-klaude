@@ -74,8 +74,9 @@ class Klaude < Formula
       echo "$(date '+%Y-%m-%d %H:%M')" > "$WORKSPACE/.klaude-session"
       
       # Create persistent auth directory  
-      CLAUDE_AUTH_DIR="$HOME/.klaude-docker-auth"
+      CLAUDE_AUTH_DIR="$HOME/.klaude-claude-auth"
       mkdir -p "$CLAUDE_AUTH_DIR"
+      chmod -R 755 "$CLAUDE_AUTH_DIR" 2>/dev/null || true
       
       echo -e "${G}Starting container...${N}"
       echo ""
@@ -90,7 +91,7 @@ class Klaude < Formula
           --hostname "klaude" \\
           --privileged \\
           -v "$WORKSPACE":/workspace \\
-          -v "$CLAUDE_AUTH_DIR":/home/claude/.config \\
+          -v "$CLAUDE_AUTH_DIR":/home/claude/.config/claude \\
           -w /workspace \\
           -e PATH=/usr/local/bin:/usr/bin:/bin \\
           klaude-image \\
@@ -98,9 +99,12 @@ class Klaude < Formula
               # The container already has a 'claude' user (UID 1000, GID 1000)
               # We need to adjust permissions for the mounted directories
               
-              # Ensure config directory is accessible to the claude user
-              mkdir -p /home/claude/.config
-              chown -R claude:claude /home/claude/.config
+              # Ensure Claude's config directory exists and is accessible
+              mkdir -p /home/claude/.config/claude
+              # Fix permissions for the mounted auth directory
+              chown -R claude:claude /home/claude/.config/claude
+              # Ensure parent .config directory exists with correct ownership
+              chown claude:claude /home/claude/.config
               
               # Give claude user access to the workspace
               chown -R claude:claude /workspace
@@ -137,14 +141,14 @@ class Klaude < Formula
       echo "☢️  Nuking all Klaude containers and images..."
       docker rm -f $(docker ps -aq --filter name=klaude) 2>/dev/null
       docker rmi klaude-image 2>/dev/null
-      rm -rf ~/.klaude-docker-auth
+      rm -rf ~/.klaude-claude-auth
       echo "✨ All Klaude data cleared!"
     EOS
     
     (bin/"klaude-auth-reset").write <<~EOS
       #!/bin/bash
       echo "🔑 Resetting Klaude authentication..."
-      rm -rf ~/.klaude-docker-auth
+      rm -rf ~/.klaude-claude-auth
       echo "✅ Auth cleared. Next run will require login."
     EOS
     
