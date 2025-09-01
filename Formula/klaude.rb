@@ -95,6 +95,10 @@ class Klaude < Formula
           -e PATH=/usr/local/bin:/usr/bin:/bin \\
           klaude-image \\
           bash -c \"
+              # Create user with host UID/GID
+              groupadd -g $GROUP_ID klaudegroup 2>/dev/null || true
+              useradd -u $USER_ID -g $GROUP_ID -M -s /bin/bash klaudeuser 2>/dev/null || true
+              
               # Ensure config directory is accessible
               mkdir -p /home/klaude/.config
               chown -R $USER_ID:$GROUP_ID /home/klaude/.config 2>/dev/null || true
@@ -113,11 +117,8 @@ class Klaude < Formula
                   exit 1
               fi
               
-              # Use setpriv to drop to non-root for claude execution
-              # This avoids the need for creating users
-              exec setpriv --reuid=$USER_ID --regid=$GROUP_ID --init-groups \\
-                  env HOME=/home/klaude \\
-                  claude --dangerously-skip-permissions
+              # Use su without login shell to run as non-root user
+              exec su klaudeuser -s /bin/bash -c 'cd /workspace && HOME=/home/klaude claude --dangerously-skip-permissions'
           \"
       
       echo -e "${G}✨ Session ended. Project intact at: $WORKSPACE${N}"
