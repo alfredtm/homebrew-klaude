@@ -109,8 +109,8 @@ class Klaude < Formula
               -e PATH=/usr/local/bin:/usr/bin:/bin \\
               -e CLAUDE_CONFIG_DIR=/home/claude/.config/claude \\
               klaude-image \\
-              /bin/bash -c 'set -e
-                  echo "🔑 Setting up authentication..."
+              bash -c \"
+                  echo '🔑 Setting up authentication...'
                   chown -R claude:claude /workspace
                   mkdir -p /home/claude/.config/claude
                   chown claude:claude /home/claude/.config
@@ -120,11 +120,15 @@ class Klaude < Formula
                       chown -R claude:claude /home/claude/.config/claude
                       chmod -R 600 /home/claude/.config/claude/* 2>/dev/null || true
                       chmod 755 /home/claude/.config/claude
-                      echo "   ✓ Auth files copied"
+                      echo '   ✓ Auth files copied'
                   fi
-                  echo "✅ Starting Claude Code..."
-                  exec su claude -c "cd /workspace && echo 'Hello! Ready to help with your project.' | claude --dangerously-skip-permissions"
-              '
+                  echo '✅ Container ready! Starting Claude Code in YOLO mode...'
+                  echo '    (Using --dangerously-skip-permissions safely in container)'
+                  echo ''
+                  
+                  # Run as the existing claude user
+                  exec su claude -c 'cd /workspace && claude --dangerously-skip-permissions'
+              \"
       else
           docker run -it --rm \\
               --name "klaude-${PROJECT_NAME//[^a-zA-Z0-9]/-}-$$" \\
@@ -146,7 +150,7 @@ class Klaude < Formula
                   echo ''
                   
                   # Run as the existing claude user
-                  exec su claude -c 'cd /workspace && echo "Hello! Ready to help with your project." | claude --dangerously-skip-permissions'
+                  exec su claude -c 'cd /workspace && claude --dangerously-skip-permissions'
               \"
       fi
       
