@@ -109,6 +109,21 @@ class Klaude < Formula
               -e PATH=/usr/local/bin:/usr/bin:/bin \\
               klaude-image \\
               bash -c \"
+                  # Give claude user access to the workspace
+                  chown -R claude:claude /workspace
+                  
+                  echo '🔑 Using mounted host Claude authentication'
+                  # Ensure .config directory exists and has proper ownership
+                  mkdir -p /home/claude/.config
+                  chown claude:claude /home/claude/.config
+                  
+                  echo '✅ Container ready! Starting Claude Code in YOLO mode...'
+                  echo '    (Using --dangerously-skip-permissions safely in container)'
+                  echo ''
+                  
+                  # Run as the existing claude user
+                  exec su claude -c 'cd /workspace && claude --dangerously-skip-permissions'
+              \"
       else
           docker run -it --rm \\
               --name "klaude-${PROJECT_NAME//[^a-zA-Z0-9]/-}-$$" \\
@@ -119,27 +134,19 @@ class Klaude < Formula
               -e PATH=/usr/local/bin:/usr/bin:/bin \\
               klaude-image \\
               bash -c \"
-      fi
-              # Give claude user access to the workspace
-              chown -R claude:claude /workspace
-              
-              # If auth is mounted, ensure proper permissions
-              if [ -d /home/claude/.config/claude ]; then
-                  echo '🔑 Using mounted host Claude authentication'
-                  # Ensure .config directory exists and has proper ownership
-                  mkdir -p /home/claude/.config
-                  chown claude:claude /home/claude/.config
-              else
+                  # Give claude user access to the workspace
+                  chown -R claude:claude /workspace
+                  
                   echo '🔑 No auth mounted, will need to login'
-              fi
-              
-              echo '✅ Container ready! Starting Claude Code in YOLO mode...'
-              echo '    (Using --dangerously-skip-permissions safely in container)'
-              echo ''
-              
-              # Run as the existing claude user
-              exec su claude -c 'cd /workspace && claude --dangerously-skip-permissions'
-          \"
+                  
+                  echo '✅ Container ready! Starting Claude Code in YOLO mode...'
+                  echo '    (Using --dangerously-skip-permissions safely in container)'
+                  echo ''
+                  
+                  # Run as the existing claude user
+                  exec su claude -c 'cd /workspace && claude --dangerously-skip-permissions'
+              \"
+      fi
       
       echo -e "${G}✨ Session ended. Project intact at: $WORKSPACE${N}"
     EOS
