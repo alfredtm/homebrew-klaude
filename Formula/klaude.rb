@@ -27,6 +27,68 @@ class Klaude < Formula
           exit 1
       fi
       
+      # Check for 1Password CLI and fetch credentials
+      OP_AVAILABLE=false
+      GH_TOKEN=""
+      KUBECONFIG_CONTENT=""
+      
+      # Allow disabling 1Password integration
+      if [ "$KLAUDE_NO_1PASSWORD" = "true" ]; then
+          echo -e "${Y}⚠️  1Password integration disabled (KLAUDE_NO_1PASSWORD=true)${N}"
+      else
+          if command -v op &>/dev/null; then
+              # Check if signed in to 1Password
+              if op account list &>/dev/null 2>&1; then
+                  echo -e "${B}🔐 Checking for 1Password items tagged 'klaude'...${N}"
+                  
+                  # Get all items with 'klaude' tag
+                  OP_ITEMS=$(op item list --tags klaude --format json 2>/dev/null || echo "[]")
+                  
+                  if [ "$OP_ITEMS" != "[]" ] && [ -n "$OP_ITEMS" ]; then
+                      # Try to get GitHub token (look for item with 'github' in title/name)
+                      for item_id in $(echo "$OP_ITEMS" | jq -r '.[] | select(.title | ascii_downcase | contains("github")) | .id' 2>/dev/null); do
+                          GH_TOKEN=$(op item get "$item_id" --fields label=token,label=pat,label=personal_access_token --format json 2>/dev/null | jq -r '.[] | .value' 2>/dev/null | head -1)
+                          if [ -n "$GH_TOKEN" ]; then
+                              echo -e "${G}  ✓ Found GitHub token${N}"
+                              break
+                          fi
+                      done
+                      
+                      # If no GitHub token found in fields, try to get it from password field
+                      if [ -z "$GH_TOKEN" ]; then
+                          for item_id in $(echo "$OP_ITEMS" | jq -r '.[] | select(.title | ascii_downcase | contains("github")) | .id' 2>/dev/null); do
+                              GH_TOKEN=$(op item get "$item_id" --fields password --format json 2>/dev/null | jq -r '.value' 2>/dev/null)
+                              if [ -n "$GH_TOKEN" ]; then
+                                  echo -e "${G}  ✓ Found GitHub token${N}"
+                                  break
+                              fi
+                          done
+                      fi
+                      
+                      # Try to get kubectl config (look for document with 'kube' in name)
+                      for item_id in $(echo "$OP_ITEMS" | jq -r '.[] | select(.title | ascii_downcase | contains("kube")) | .id' 2>/dev/null); do
+                          KUBECONFIG_CONTENT=$(op document get "$item_id" 2>/dev/null)
+                          if [ -n "$KUBECONFIG_CONTENT" ]; then
+                              echo -e "${G}  ✓ Found kubectl config${N}"
+                              break
+                          fi
+                      done
+                      
+                      if [ -n "$GH_TOKEN" ] || [ -n "$KUBECONFIG_CONTENT" ]; then
+                          OP_AVAILABLE=true
+                      else
+                          echo -e "${Y}ℹ️  No GitHub token or kubectl config found in items tagged 'klaude'${N}"
+                      fi
+                  else
+                      echo -e "${Y}ℹ️  No 1Password items tagged with 'klaude' found${N}"
+                      echo -e "${Y}    Tag your GitHub token and/or kubeconfig items with 'klaude' to use them${N}"
+                  fi
+              else
+                  echo -e "${Y}ℹ️  1Password CLI found but not signed in (run 'op signin' first)${N}"
+              fi
+          fi
+      fi
+      
       # Check if klaude image exists locally
       IMAGE_NAME="ghcr.io/alfredtm/klaude:latest"
       LOCAL_IMAGE="klaude-image"
@@ -92,6 +154,27 @@ class Klaude < Formula
           HAS_AUTH=false
       fi
       
+      # Prepare environment variables and temp files for credentials
+      DOCKER_ENV_ARGS=""
+      DOCKER_VOLUME_ARGS=""
+      TEMP_KUBECONFIG=""
+      
+      if [ "$OP_AVAILABLE" = "true" ]; then
+          # Add GitHub token as environment variable
+          if [ -n "$GH_TOKEN" ]; then
+              DOCKER_ENV_ARGS="$DOCKER_ENV_ARGS -e GITHUB_TOKEN=$GH_TOKEN -e GH_TOKEN=$GH_TOKEN"
+          fi
+          
+          # Create temporary kubeconfig file
+          if [ -n "$KUBECONFIG_CONTENT" ]; then
+              TEMP_KUBECONFIG=$(mktemp -t klaude-kubeconfig.XXXXXX)
+              echo "$KUBECONFIG_CONTENT" > "$TEMP_KUBECONFIG"
+              DOCKER_VOLUME_ARGS="$DOCKER_VOLUME_ARGS -v $TEMP_KUBECONFIG:/home/claude/.kube/config:ro"
+              # Ensure cleanup on exit
+              trap "rm -f '$TEMP_KUBECONFIG' 2>/dev/null" EXIT INT TERM
+          fi
+      fi
+      
       # Run container with persistent Klaude auth directory
       docker run -it --rm \\
               --name "klaude-${PROJECT_NAME//[^a-zA-Z0-9]/-}-$$" \\
@@ -99,11 +182,13 @@ class Klaude < Formula
               --privileged \\
               -v "$WORKSPACE":/workspace \\
               -v "$KLAUDE_AUTH_DIR":/home/claude/.config/claude \\
+              $DOCKER_VOLUME_ARGS \\
               -w /workspace \\
               -e PATH=/usr/local/bin:/usr/bin:/bin \\
               -e CLAUDE_CONFIG_DIR=/home/claude/.config/claude \\
               -e HOME=/home/claude \\
               -e USER=claude \\
+              $DOCKER_ENV_ARGS \\
               klaude-image \\
               bash -c \"
                   # Skip workspace chown since we use --dangerously-skip-permissions
@@ -122,9 +207,22 @@ class Klaude < Formula
                   
                   # Ensure proper directory structure and ownership
                   mkdir -p /home/claude/.config
+                  mkdir -p /home/claude/.kube
                   chown -R claude:claude /home/claude/.config
                   chown -R claude:claude /home/claude/.config/claude 2>/dev/null || true
                   chmod 755 /home/claude/.config/claude
+                  
+                  # Set up kubectl config if mounted
+                  if [ -f /home/claude/.kube/config ]; then
+                      chown claude:claude /home/claude/.kube
+                      chmod 600 /home/claude/.kube/config 2>/dev/null || true
+                      echo '☸️  Kubectl configured from 1Password'
+                  fi
+                  
+                  # Show if GitHub token is available
+                  if [ -n \"\$GITHUB_TOKEN\" ]; then
+                      echo '🔑 GitHub token available from 1Password'
+                  fi
                   
                   # Ensure Claude can write to config files for session persistence
                   find /home/claude/.config/claude -type f -exec chmod 644 {} \; 2>/dev/null || true
@@ -136,6 +234,9 @@ class Klaude < Formula
                   # Run as the existing claude user
                   exec su claude -c 'cd /workspace && claude --dangerously-skip-permissions'
               \"
+      
+      # Clean up temp file if it exists (backup cleanup)
+      [ -n "$TEMP_KUBECONFIG" ] && rm -f "$TEMP_KUBECONFIG" 2>/dev/null
       
       echo -e "${G}✨ Session ended. Project intact at: $WORKSPACE${N}"
     EOS
@@ -182,6 +283,16 @@ class Klaude < Formula
       2. Run 'klaude' in any project directory
       3. Image will be automatically pulled from GitHub Container Registry
       4. Login with your Claude Pro/Max subscription when prompted (first run only)
+      
+      #{Formatter.headline("1Password Integration (Optional):")}
+      Tag your 1Password items with 'klaude':
+        • GitHub Personal Access Token (with 'github' in the title)
+        • Kubectl config document (with 'kube' in the title)
+      
+      Then run: op signin (if not already signed in)
+      Klaude will automatically detect and use these credentials!
+      
+      To disable: KLAUDE_NO_1PASSWORD=true klaude
       
       #{Formatter.headline("Important:")}
       ⚠️  Klaude runs in YOLO mode - Claude has full access to the mounted directory!
