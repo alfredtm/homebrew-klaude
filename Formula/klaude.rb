@@ -86,10 +86,10 @@ class Klaude < Formula
       
       if [ -d "$CLAUDE_AUTH_DIR_MACOS" ] && [ "$(ls -A "$CLAUDE_AUTH_DIR_MACOS" 2>/dev/null)" ]; then
           echo -e "${G}🔑 Found local Claude auth (macOS), mounting to container${N}"
-          CLAUDE_AUTH_MOUNT="-v '$CLAUDE_AUTH_DIR_MACOS':/home/claude/.config/claude:ro"
+          CLAUDE_AUTH_MOUNT="-v \"$CLAUDE_AUTH_DIR_MACOS\":/home/claude/.config/claude:ro"
       elif [ -d "$CLAUDE_AUTH_DIR_LINUX" ] && [ "$(ls -A "$CLAUDE_AUTH_DIR_LINUX" 2>/dev/null)" ]; then
           echo -e "${G}🔑 Found local Claude auth (Linux), mounting to container${N}"
-          CLAUDE_AUTH_MOUNT="-v '$CLAUDE_AUTH_DIR_LINUX':/home/claude/.config/claude:ro"
+          CLAUDE_AUTH_MOUNT="-v \"$CLAUDE_AUTH_DIR_LINUX\":/home/claude/.config/claude:ro"
       else
           echo -e "${Y}⚠️  No local Claude auth found, will need to login in container${N}"
           CLAUDE_AUTH_MOUNT=""
