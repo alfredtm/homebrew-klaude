@@ -100,12 +100,12 @@ class Klaude < Formula
               # The container already has a 'claude' user (UID 1000, GID 1000)
               # We need to adjust permissions for the mounted directories
               
-              # Check if .claude already exists with auth data
-              if [ -d /home/claude/.claude ] && [ "\$(ls -A /home/claude/.claude)" ]; then
+              # Ensure the mount point exists and check for auth data
+              mkdir -p /home/claude/.claude
+              if [ -d /home/claude/.claude ] && [ "\$(ls -A /home/claude/.claude 2>/dev/null)" ]; then
                   echo '🔑 Found existing auth data'
               else
                   echo '🔑 No existing auth found, will need to login'
-                  mkdir -p /home/claude/.claude
               fi
               
               # Fix permissions for the mounted auth directory
@@ -129,18 +129,23 @@ class Klaude < Formula
               
               # Run as the existing claude user with proper HOME set
               # Explicitly set HOME to ensure Claude finds the auth files
-              exec su claude -c '
+              exec su claude -c \"
                   export HOME=/home/claude
-                  echo \"🔍 Debug: HOME=\$HOME\"
-                  echo \"🔍 Auth files: \$(ls -la /home/claude/.claude/ 2>/dev/null | wc -l) files found\"
-                  if [ -f /home/claude/.claude/.credentials.json ]; then
-                      echo \"🔑 Credentials file found\"
+                  echo '🔍 Debug: HOME='\\\$HOME
+                  if [ -d /home/claude/.claude ]; then
+                      echo '🔍 Auth directory exists'
+                      echo '🔍 Auth files:' \\\$(ls -la /home/claude/.claude/ 2>/dev/null | wc -l) 'files found'
+                      if [ -f /home/claude/.claude/.credentials.json ]; then
+                          echo '🔑 Credentials file found'
+                      else
+                          echo '❌ No credentials file found'
+                      fi
                   else
-                      echo \"❌ No credentials file found\"
+                      echo '❌ Auth directory /home/claude/.claude does not exist'
                   fi
                   cd /workspace
                   claude --dangerously-skip-permissions
-              '
+              \"
           \"
       
       echo -e "${G}✨ Session ended. Project intact at: $WORKSPACE${N}"
