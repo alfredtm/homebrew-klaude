@@ -126,7 +126,7 @@ class Klaude < Formula
                   
                   # Create .claude.json with bypass permissions if it doesn't exist
                   if [ ! -f /home/claude/.config/claude/.claude.json ]; then
-                      echo '{\"bypassPermissionsModeAccepted\": true}' > /home/claude/.config/claude/.claude.json
+                      echo '{"bypassPermissionsModeAccepted": true}' > /home/claude/.config/claude/.claude.json
                       chown claude:claude /home/claude/.config/claude/.claude.json
                   fi
                   
