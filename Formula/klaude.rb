@@ -115,12 +115,20 @@ class Klaude < Formula
                   
                   echo '🔑 Using mounted host Claude authentication'
                   
-                  # Fix ownership of mounted auth files for claude user
-                  chown -R claude:claude /home/claude/.config/claude
-                  
-                  # Ensure .config directory exists and has proper ownership
+                  # Ensure .config directory exists first
                   mkdir -p /home/claude/.config
                   chown claude:claude /home/claude/.config
+                  
+                  # Make auth files writable by copying from mount
+                  if [ -d /home/claude/.config/claude ]; then
+                      cp -r /home/claude/.config/claude /tmp/claude-auth-backup 2>/dev/null || true
+                      rm -rf /home/claude/.config/claude
+                      mv /tmp/claude-auth-backup /home/claude/.config/claude 2>/dev/null || true
+                      chown -R claude:claude /home/claude/.config/claude
+                      chmod 755 /home/claude/.config/claude
+                      chmod -R 600 /home/claude/.config/claude/* 2>/dev/null || true
+                      echo '   ✓ Auth files made writable for claude'
+                  fi
                   
                   echo '✅ Container ready! Starting Claude Code in YOLO mode...'
                   echo '    (Using --dangerously-skip-permissions safely in container)'
