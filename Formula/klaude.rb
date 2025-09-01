@@ -73,10 +73,11 @@ class Klaude < Formula
       # Mark new session
       echo "$(date '+%Y-%m-%d %H:%M')" > "$WORKSPACE/.klaude-session"
       
-      # Create persistent auth directory  
+      # Create persistent auth directory with proper permissions
       CLAUDE_AUTH_DIR="$HOME/.klaude-claude-auth"
       mkdir -p "$CLAUDE_AUTH_DIR"
-      chmod -R 755 "$CLAUDE_AUTH_DIR" 2>/dev/null || true
+      # Ensure the directory exists and has correct permissions for the user
+      chmod 777 "$CLAUDE_AUTH_DIR" 2>/dev/null || true
       
       echo -e "${G}Starting container...${N}"
       echo ""
@@ -99,10 +100,19 @@ class Klaude < Formula
               # The container already has a 'claude' user (UID 1000, GID 1000)
               # We need to adjust permissions for the mounted directories
               
-              # Ensure Claude's auth directory exists (.claude, not .config/claude)
-              mkdir -p /home/claude/.claude
+              # Check if .claude already exists with auth data
+              if [ -d /home/claude/.claude ] && [ "\$(ls -A /home/claude/.claude)" ]; then
+                  echo '🔑 Found existing auth data'
+              else
+                  echo '🔑 No existing auth found, will need to login'
+                  mkdir -p /home/claude/.claude
+              fi
+              
               # Fix permissions for the mounted auth directory
+              # Use 777 to ensure both host and container can read/write
+              chmod -R 777 /home/claude/.claude 2>/dev/null || true
               chown -R claude:claude /home/claude/.claude
+              
               # Also ensure .config exists for any other configs
               mkdir -p /home/claude/.config
               chown claude:claude /home/claude/.config
