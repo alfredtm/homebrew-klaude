@@ -101,8 +101,18 @@ class Klaude < Formula
               # We need to adjust permissions for the mounted directories
               
               # Ensure the mount point exists and check for auth data
-              mkdir -p /home/claude/.claude
-              if [ -d /home/claude/.claude ] && [ "\$(ls -A /home/claude/.claude 2>/dev/null)" ]; then
+              mkdir -p /home/claude/.claude/statsig
+              
+              # Create a consistent stable_id if it doesn't exist
+              # This is crucial for Claude to recognize the machine across container restarts
+              if [ ! -f /home/claude/.claude/statsig/statsig.stable_id.* ]; then
+                  # Generate a stable ID based on the user to ensure consistency
+                  STABLE_ID=\$(echo \"klaude-$USER_ID-$GROUP_ID\" | sha256sum | cut -c1-8)-\$(echo \"klaude-$USER_ID\" | sha256sum | cut -c1-4)-\$(echo \"auth-$GROUP_ID\" | sha256sum | cut -c1-4)-\$(echo \"claude-$USER_ID\" | sha256sum | cut -c1-4)-\$(echo \"docker-$GROUP_ID\" | sha256sum | cut -c1-12)
+                  echo \"\\\"\$STABLE_ID\\\"\" > /home/claude/.claude/statsig/statsig.stable_id.2656274335
+                  echo '🔧 Created consistent stable_id for auth persistence'
+              fi
+              
+              if [ -f /home/claude/.claude/.credentials.json ]; then
                   echo '🔑 Found existing auth data'
               else
                   echo '🔑 No existing auth found, will need to login'
