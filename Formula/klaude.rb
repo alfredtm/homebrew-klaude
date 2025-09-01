@@ -127,8 +127,20 @@ class Klaude < Formula
               echo '    (Using --dangerously-skip-permissions safely in container)'
               echo ''
               
-              # Run as the existing claude user (non-root)
-              exec su claude -c 'cd /workspace && claude --dangerously-skip-permissions'
+              # Run as the existing claude user with proper HOME set
+              # Explicitly set HOME to ensure Claude finds the auth files
+              exec su claude -c '
+                  export HOME=/home/claude
+                  echo \"🔍 Debug: HOME=\$HOME\"
+                  echo \"🔍 Auth files: \$(ls -la /home/claude/.claude/ 2>/dev/null | wc -l) files found\"
+                  if [ -f /home/claude/.claude/.credentials.json ]; then
+                      echo \"🔑 Credentials file found\"
+                  else
+                      echo \"❌ No credentials file found\"
+                  fi
+                  cd /workspace
+                  claude --dangerously-skip-permissions
+              '
           \"
       
       echo -e "${G}✨ Session ended. Project intact at: $WORKSPACE${N}"
