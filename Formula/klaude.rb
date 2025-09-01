@@ -107,6 +107,7 @@ class Klaude < Formula
               -v "$CLAUDE_AUTH_SOURCE":/home/claude/.config/claude \\
               -w /workspace \\
               -e PATH=/usr/local/bin:/usr/bin:/bin \\
+              -e CLAUDE_CONFIG_DIR=/home/claude/.config/claude \\
               klaude-image \\
               bash -c \"
                   # Give claude user access to the workspace
@@ -115,6 +116,20 @@ class Klaude < Formula
                   echo '🔑 Using mounted host Claude authentication'
                   # Fix ownership of mounted auth files for claude user
                   chown -R claude:claude /home/claude/.config/claude
+                  
+                  # Copy key auth files to ensure proper permissions (GitHub issue #1736 approach)
+                  if [ -f /home/claude/.config/claude/.credentials.json ]; then
+                      cp /home/claude/.config/claude/.credentials.json /tmp/credentials.json.bak
+                      chown claude:claude /tmp/credentials.json.bak
+                      cp /tmp/credentials.json.bak /home/claude/.config/claude/.credentials.json
+                  fi
+                  
+                  # Create .claude.json with bypass permissions if it doesn't exist
+                  if [ ! -f /home/claude/.config/claude/.claude.json ]; then
+                      echo '{\"bypassPermissionsModeAccepted\": true}' > /home/claude/.config/claude/.claude.json
+                      chown claude:claude /home/claude/.config/claude/.claude.json
+                  fi
+                  
                   # Ensure .config directory exists and has proper ownership
                   mkdir -p /home/claude/.config
                   chown claude:claude /home/claude/.config
@@ -134,6 +149,7 @@ class Klaude < Formula
               -v "$WORKSPACE":/workspace \\
               -w /workspace \\
               -e PATH=/usr/local/bin:/usr/bin:/bin \\
+              -e CLAUDE_CONFIG_DIR=/home/claude/.config/claude \\
               klaude-image \\
               bash -c \"
                   # Give claude user access to the workspace
