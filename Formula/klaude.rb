@@ -104,24 +104,24 @@ class Klaude < Formula
               --hostname "klaude" \\
               --privileged \\
               -v "$WORKSPACE":/workspace \\
-              -v "$CLAUDE_AUTH_SOURCE":/tmp/host-claude-auth \\
+              -v "$CLAUDE_AUTH_SOURCE":/home/claude/.config/claude \\
               -w /workspace \\
               -e PATH=/usr/local/bin:/usr/bin:/bin \\
               -e CLAUDE_CONFIG_DIR=/home/claude/.config/claude \\
               klaude-image \\
               bash -c \"
-                  echo '🔑 Setting up authentication...'
+                  # Give claude user access to the workspace
                   chown -R claude:claude /workspace
-                  mkdir -p /home/claude/.config/claude
+                  
+                  echo '🔑 Using mounted host Claude authentication'
+                  
+                  # Fix ownership of mounted auth files for claude user
+                  chown -R claude:claude /home/claude/.config/claude
+                  
+                  # Ensure .config directory exists and has proper ownership
+                  mkdir -p /home/claude/.config
                   chown claude:claude /home/claude/.config
-                  chown claude:claude /home/claude/.config/claude
-                  if [ -d /tmp/host-claude-auth ]; then
-                      cp -r /tmp/host-claude-auth/* /home/claude/.config/claude/ 2>/dev/null || true
-                      chown -R claude:claude /home/claude/.config/claude
-                      chmod -R 600 /home/claude/.config/claude/* 2>/dev/null || true
-                      chmod 755 /home/claude/.config/claude
-                      echo '   ✓ Auth files copied'
-                  fi
+                  
                   echo '✅ Container ready! Starting Claude Code in YOLO mode...'
                   echo '    (Using --dangerously-skip-permissions safely in container)'
                   echo ''
