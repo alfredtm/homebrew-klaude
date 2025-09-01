@@ -105,11 +105,13 @@ class Klaude < Formula
               
               # Create a consistent stable_id if it doesn't exist
               # This is crucial for Claude to recognize the machine across container restarts
-              if [ ! -f /home/claude/.claude/statsig/statsig.stable_id.* ]; then
+              if [ ! -f /home/claude/.claude/statsig/statsig.stable_id.2656274335 ]; then
                   # Generate a stable ID based on the user to ensure consistency
-                  STABLE_ID=\$(echo \"klaude-$USER_ID-$GROUP_ID\" | sha256sum | cut -c1-8)-\$(echo \"klaude-$USER_ID\" | sha256sum | cut -c1-4)-\$(echo \"auth-$GROUP_ID\" | sha256sum | cut -c1-4)-\$(echo \"claude-$USER_ID\" | sha256sum | cut -c1-4)-\$(echo \"docker-$GROUP_ID\" | sha256sum | cut -c1-12)
+                  STABLE_ID=\$(printf 'klaude-%s-%s' '$USER_ID' '$GROUP_ID' | sha256sum | cut -c1-8)-\$(printf 'user-%s' '$USER_ID' | sha256sum | cut -c1-4)-\$(printf 'grp-%s' '$GROUP_ID' | sha256sum | cut -c1-4)-\$(printf 'auth-%s' '$USER_ID' | sha256sum | cut -c1-4)-\$(printf 'dock-%s' '$GROUP_ID' | sha256sum | cut -c1-12)
                   echo \"\\\"\$STABLE_ID\\\"\" > /home/claude/.claude/statsig/statsig.stable_id.2656274335
                   echo '🔧 Created consistent stable_id for auth persistence'
+              else
+                  echo '🔧 Using existing stable_id'
               fi
               
               if [ -f /home/claude/.claude/.credentials.json ]; then
