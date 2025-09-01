@@ -18,7 +18,7 @@ Klaude runs Claude Code in Docker with full access to your project files. Safe c
 1. Make sure Docker Desktop is running
 2. Run `klaude` in any project directory
 3. Login with your Claude Pro/Max subscription (first run only)
-4. Code with Claude in safe YOLO mode!
+4. Code with Claude using `--dangerously-skip-permissions` in safe container!
 
 ## Commands
 
@@ -36,7 +36,7 @@ Klaude runs Claude Code in Docker with full access to your project files. Safe c
 
 ## ⚠️ Important
 
-Klaude runs in YOLO mode - Claude has **full access** to the mounted directory! Changes are made to your **ACTUAL files** (not copies).
+Klaude runs with `--dangerously-skip-permissions` - Claude has **full access** to the mounted directory! Changes are made to your **ACTUAL files** (not copies).
 
 ## Links
 
