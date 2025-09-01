@@ -106,8 +106,8 @@ class Klaude < Formula
               -e USER=claude \\
               klaude-image \\
               bash -c \"
-                  # Give claude user access to the workspace
-                  chown -R claude:claude /workspace
+                  # Skip workspace chown since we use --dangerously-skip-permissions
+                  echo '📁 Workspace: /workspace (using --dangerously-skip-permissions)'
                   
                   if [ -f /home/claude/.config/claude/.credentials.json ]; then
                       echo '🔑 Using saved Klaude authentication'
