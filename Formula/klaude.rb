@@ -73,12 +73,6 @@ class Klaude < Formula
       # Mark new session
       echo "$(date '+%Y-%m-%d %H:%M')" > "$WORKSPACE/.klaude-session"
       
-      # Create persistent auth directory with proper permissions
-      CLAUDE_AUTH_DIR="$HOME/.klaude-claude-auth"
-      mkdir -p "$CLAUDE_AUTH_DIR"
-      # Ensure the directory exists and has correct permissions for the user
-      chmod 777 "$CLAUDE_AUTH_DIR" 2>/dev/null || true
-      
       echo -e "${G}Starting container...${N}"
       echo ""
       
@@ -92,64 +86,19 @@ class Klaude < Formula
           --hostname "klaude" \\
           --privileged \\
           -v "$WORKSPACE":/workspace \\
-          -v "$CLAUDE_AUTH_DIR":/home/claude/.claude \\
           -w /workspace \\
           -e PATH=/usr/local/bin:/usr/bin:/bin \\
           klaude-image \\
           bash -c \"
-              # The container already has a 'claude' user (UID 1000, GID 1000)
-              # We need to adjust permissions for the mounted directories
-              
-              # Ensure the mount point exists and check for auth data
-              mkdir -p /home/claude/.claude/statsig
-              
-              # Create a consistent stable_id if it doesn't exist
-              # This is crucial for Claude to recognize the machine across container restarts
-              if [ ! -f /home/claude/.claude/statsig/statsig.stable_id.2656274335 ]; then
-                  # Generate a stable ID based on the user to ensure consistency
-                  STABLE_ID=\$(printf 'klaude-%s-%s' '$USER_ID' '$GROUP_ID' | sha256sum | cut -c1-8)-\$(printf 'user-%s' '$USER_ID' | sha256sum | cut -c1-4)-\$(printf 'grp-%s' '$GROUP_ID' | sha256sum | cut -c1-4)-\$(printf 'auth-%s' '$USER_ID' | sha256sum | cut -c1-4)-\$(printf 'dock-%s' '$GROUP_ID' | sha256sum | cut -c1-12)
-                  echo \"\\\"\$STABLE_ID\\\"\" > /home/claude/.claude/statsig/statsig.stable_id.2656274335
-                  echo '🔧 Created consistent stable_id for auth persistence'
-              else
-                  echo '🔧 Using existing stable_id'
-              fi
-              
-              if [ -f /home/claude/.claude/.credentials.json ]; then
-                  echo '🔑 Found existing auth data'
-              else
-                  echo '🔑 No existing auth found, will need to login'
-              fi
-              
-              # Fix permissions for the mounted auth directory
-              # Use 777 to ensure both host and container can read/write
-              chmod -R 777 /home/claude/.claude 2>/dev/null || true
-              chown -R claude:claude /home/claude/.claude
-              
-              # Also ensure .config exists for any other configs
-              mkdir -p /home/claude/.config
-              chown claude:claude /home/claude/.config
-              
               # Give claude user access to the workspace
               chown -R claude:claude /workspace
               
-              echo '📝 Note: On first run, Claude will open a browser for login'
-              echo '   Your auth will be saved for future sessions'
-              echo ''
               echo '✅ Container ready! Starting Claude Code in YOLO mode...'
               echo '    (Using --dangerously-skip-permissions safely in container)'
               echo ''
               
-              # Run as the existing claude user with proper HOME set
-              # Set trap to ensure Claude saves session data properly on exit
-              exec su claude -c '
-                  export HOME=/home/claude
-                  cd /workspace
-                  
-                  # Set up signal handlers to allow Claude to save state
-                  trap \"echo Saving Claude session...; sleep 2\" TERM INT
-                  
-                  claude --dangerously-skip-permissions
-              '
+              # Run as the existing claude user
+              exec su claude -c 'cd /workspace && claude --dangerously-skip-permissions'
           \"
       
       echo -e "${G}✨ Session ended. Project intact at: $WORKSPACE${N}"
@@ -173,15 +122,7 @@ class Klaude < Formula
       echo "☢️  Nuking all Klaude containers and images..."
       docker rm -f $(docker ps -aq --filter name=klaude) 2>/dev/null
       docker rmi klaude-image 2>/dev/null
-      rm -rf ~/.klaude-claude-auth
-      echo "✨ All Klaude data cleared!"
-    EOS
-    
-    (bin/"klaude-auth-reset").write <<~EOS
-      #!/bin/bash
-      echo "🔑 Resetting Klaude authentication..."
-      rm -rf ~/.klaude-claude-auth
-      echo "✅ Auth cleared. Next run will require login."
+      echo "✨ All Klaude containers and images cleared!"
     EOS
     
     # Make all scripts executable
@@ -198,14 +139,13 @@ class Klaude < Formula
         klaude              - Start Klaude in current directory
         klaude [path]       - Start Klaude in specific directory
         klaude-update       - Update to latest Claude Code version
-        klaude-nuke         - Remove all Klaude data and containers
-        klaude-auth-reset   - Clear saved authentication
+        klaude-nuke         - Remove all Klaude containers and images
       
       #{Formatter.headline("First Run:")}
       1. Make sure Docker Desktop is running
       2. Run 'klaude' in any project directory
       3. Image will be automatically pulled from GitHub Container Registry
-      4. Login with your Claude Pro/Max subscription when prompted
+      4. Login with your Claude Pro/Max subscription when prompted (required each session)
       
       #{Formatter.headline("Important:")}
       ⚠️  Klaude runs in YOLO mode - Claude has full access to the mounted directory!
