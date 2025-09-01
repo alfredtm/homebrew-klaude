@@ -140,7 +140,16 @@ class Klaude < Formula
               echo ''
               
               # Run as the existing claude user with proper HOME set
-              exec su claude -c 'HOME=/home/claude && cd /workspace && claude --dangerously-skip-permissions'
+              # Set trap to ensure Claude saves session data properly on exit
+              exec su claude -c '
+                  export HOME=/home/claude
+                  cd /workspace
+                  
+                  # Set up signal handlers to allow Claude to save state
+                  trap \"echo Saving Claude session...; sleep 2\" TERM INT
+                  
+                  claude --dangerously-skip-permissions
+              '
           \"
       
       echo -e "${G}✨ Session ended. Project intact at: $WORKSPACE${N}"
