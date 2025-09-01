@@ -80,31 +80,25 @@ class Klaude < Formula
       USER_ID=$(id -u)
       GROUP_ID=$(id -g)
       
-      # Check for Claude auth in macOS location first, then fallback to Linux location
-      CLAUDE_AUTH_DIR_MACOS="$HOME/Library/Application Support/Claude"
-      CLAUDE_AUTH_DIR_LINUX="$HOME/.config/claude"
+      # Use persistent auth directory for Klaude (separate from host Claude)
+      KLAUDE_AUTH_DIR="$HOME/.config/klaude-auth"
+      mkdir -p "$KLAUDE_AUTH_DIR"
       
-      if [ -d "$CLAUDE_AUTH_DIR_MACOS" ] && [ "$(ls -A "$CLAUDE_AUTH_DIR_MACOS" 2>/dev/null)" ]; then
-          echo -e "${G}🔑 Found local Claude auth (macOS), mounting to container${N}"
-          CLAUDE_AUTH_SOURCE="$CLAUDE_AUTH_DIR_MACOS"
-          HAS_AUTH=true
-      elif [ -d "$CLAUDE_AUTH_DIR_LINUX" ] && [ "$(ls -A "$CLAUDE_AUTH_DIR_LINUX" 2>/dev/null)" ]; then
-          echo -e "${G}🔑 Found local Claude auth (Linux), mounting to container${N}"
-          CLAUDE_AUTH_SOURCE="$CLAUDE_AUTH_DIR_LINUX"
+      if [ -f "$KLAUDE_AUTH_DIR/.credentials.json" ]; then
+          echo -e "${G}🔑 Found saved Klaude authentication${N}"
           HAS_AUTH=true
       else
-          echo -e "${Y}⚠️  No local Claude auth found, will need to login in container${N}"
+          echo -e "${Y}🔑 No saved auth found - will need to login once${N}"
           HAS_AUTH=false
       fi
       
-      # Run container as root initially to set up, then drop privileges for claude
-      if [ "$HAS_AUTH" = true ]; then
-          docker run -it --rm \\
+      # Run container with persistent Klaude auth directory
+      docker run -it --rm \\
               --name "klaude-${PROJECT_NAME//[^a-zA-Z0-9]/-}-$$" \\
               --hostname "klaude" \\
               --privileged \\
               -v "$WORKSPACE":/workspace \\
-              -v "$CLAUDE_AUTH_SOURCE":/home/claude/.config/claude \\
+              -v "$KLAUDE_AUTH_DIR":/home/claude/.config/claude \\
               -w /workspace \\
               -e PATH=/usr/local/bin:/usr/bin:/bin \\
               -e CLAUDE_CONFIG_DIR=/home/claude/.config/claude \\
@@ -115,7 +109,11 @@ class Klaude < Formula
                   # Give claude user access to the workspace
                   chown -R claude:claude /workspace
                   
-                  echo '🔑 Using host Claude authentication'
+                  if [ -f /home/claude/.config/claude/.credentials.json ]; then
+                      echo '🔑 Using saved Klaude authentication'
+                  else
+                      echo '🔑 First run - you will need to login once'
+                  fi
                   
                   # Set up proper environment for Claude
                   export HOME=/home/claude
@@ -132,36 +130,12 @@ class Klaude < Formula
                   find /home/claude/.config/claude -type f -exec chmod 644 {} \; 2>/dev/null || true
                   
                   echo '✅ Container ready! Starting Claude Code in YOLO mode...'
-                  echo '    (Using --dangerously-skip-permissions safely in container)'
+                  echo '    (Authentication will persist after first login)'
                   echo ''
                   
                   # Run as the existing claude user
                   exec su claude -c 'cd /workspace && claude --dangerously-skip-permissions'
               \"
-      else
-          docker run -it --rm \\
-              --name "klaude-${PROJECT_NAME//[^a-zA-Z0-9]/-}-$$" \\
-              --hostname "klaude" \\
-              --privileged \\
-              -v "$WORKSPACE":/workspace \\
-              -w /workspace \\
-              -e PATH=/usr/local/bin:/usr/bin:/bin \\
-              -e CLAUDE_CONFIG_DIR=/home/claude/.config/claude \\
-              klaude-image \\
-              bash -c \"
-                  # Give claude user access to the workspace
-                  chown -R claude:claude /workspace
-                  
-                  echo '🔑 No auth mounted, will need to login'
-                  
-                  echo '✅ Container ready! Starting Claude Code in YOLO mode...'
-                  echo '    (Using --dangerously-skip-permissions safely in container)'
-                  echo ''
-                  
-                  # Run as the existing claude user
-                  exec su claude -c 'cd /workspace && claude --dangerously-skip-permissions'
-              \"
-      fi
       
       echo -e "${G}✨ Session ended. Project intact at: $WORKSPACE${N}"
     EOS
@@ -207,8 +181,7 @@ class Klaude < Formula
       1. Make sure Docker Desktop is running
       2. Run 'klaude' in any project directory
       3. Image will be automatically pulled from GitHub Container Registry
-      4. Login with your Claude Pro/Max subscription when prompted
-         (Note: Login is required each session - auth persistence in containers is complex)
+      4. Login with your Claude Pro/Max subscription when prompted (first run only)
       
       #{Formatter.headline("Important:")}
       ⚠️  Klaude runs in YOLO mode - Claude has full access to the mounted directory!
