@@ -124,11 +124,8 @@ class Klaude < Formula
                       cp /tmp/credentials.json.bak /home/claude/.config/claude/.credentials.json
                   fi
                   
-                  # Create .claude.json with bypass permissions if it doesn't exist
-                  if [ ! -f /home/claude/.config/claude/.claude.json ]; then
-                      echo '{"bypassPermissionsModeAccepted": true}' > /home/claude/.config/claude/.claude.json
-                      chown claude:claude /home/claude/.config/claude/.claude.json
-                  fi
+                  # Ensure all mounted files have correct permissions
+                  chmod -R 755 /home/claude/.config/claude
                   
                   # Ensure .config directory exists and has proper ownership
                   mkdir -p /home/claude/.config
