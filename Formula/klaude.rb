@@ -91,7 +91,7 @@ class Klaude < Formula
           --hostname "klaude" \\
           --privileged \\
           -v "$WORKSPACE":/workspace \\
-          -v "$CLAUDE_AUTH_DIR":/home/claude/.config/claude \\
+          -v "$CLAUDE_AUTH_DIR":/home/claude/.claude \\
           -w /workspace \\
           -e PATH=/usr/local/bin:/usr/bin:/bin \\
           klaude-image \\
@@ -99,11 +99,12 @@ class Klaude < Formula
               # The container already has a 'claude' user (UID 1000, GID 1000)
               # We need to adjust permissions for the mounted directories
               
-              # Ensure Claude's config directory exists and is accessible
-              mkdir -p /home/claude/.config/claude
+              # Ensure Claude's auth directory exists (.claude, not .config/claude)
+              mkdir -p /home/claude/.claude
               # Fix permissions for the mounted auth directory
-              chown -R claude:claude /home/claude/.config/claude
-              # Ensure parent .config directory exists with correct ownership
+              chown -R claude:claude /home/claude/.claude
+              # Also ensure .config exists for any other configs
+              mkdir -p /home/claude/.config
               chown claude:claude /home/claude/.config
               
               # Give claude user access to the workspace
