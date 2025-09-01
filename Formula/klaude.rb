@@ -108,27 +108,28 @@ class Klaude < Formula
               -w /workspace \\
               -e PATH=/usr/local/bin:/usr/bin:/bin \\
               -e CLAUDE_CONFIG_DIR=/home/claude/.config/claude \\
+              -e HOME=/home/claude \\
+              -e USER=claude \\
               klaude-image \\
               bash -c \"
                   # Give claude user access to the workspace
                   chown -R claude:claude /workspace
                   
-                  echo '🔑 Using mounted host Claude authentication'
+                  echo '🔑 Using host Claude authentication with persistence'
                   
-                  # Ensure .config directory exists first
+                  # Set up proper environment for Claude
+                  export HOME=/home/claude
+                  export USER=claude
+                  export CLAUDE_CONFIG_DIR=/home/claude/.config/claude
+                  
+                  # Ensure proper directory structure and ownership
                   mkdir -p /home/claude/.config
-                  chown claude:claude /home/claude/.config
+                  chown -R claude:claude /home/claude/.config
+                  chown -R claude:claude /home/claude/.config/claude 2>/dev/null || true
+                  chmod 755 /home/claude/.config/claude
                   
-                  # Make auth files writable by copying from mount
-                  if [ -d /home/claude/.config/claude ]; then
-                      cp -r /home/claude/.config/claude /tmp/claude-auth-backup 2>/dev/null || true
-                      rm -rf /home/claude/.config/claude
-                      mv /tmp/claude-auth-backup /home/claude/.config/claude 2>/dev/null || true
-                      chown -R claude:claude /home/claude/.config/claude
-                      chmod 755 /home/claude/.config/claude
-                      chmod -R 600 /home/claude/.config/claude/* 2>/dev/null || true
-                      echo '   ✓ Auth files made writable for claude'
-                  fi
+                  # Ensure Claude can write to config files for session persistence
+                  find /home/claude/.config/claude -type f -exec chmod 644 {} \; 2>/dev/null || true
                   
                   echo '✅ Container ready! Starting Claude Code in YOLO mode...'
                   echo '    (Using --dangerously-skip-permissions safely in container)'
