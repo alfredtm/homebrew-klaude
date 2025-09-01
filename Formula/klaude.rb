@@ -80,18 +80,38 @@ class Klaude < Formula
       USER_ID=$(id -u)
       GROUP_ID=$(id -g)
       
+      # Check if user has local Claude auth
+      if [ -d "$HOME/.config/claude" ]; then
+          echo -e "${G}🔑 Found local Claude auth, mounting to container${N}"
+          CLAUDE_AUTH_MOUNT="-v $HOME/.config/claude:/home/claude/.config/claude:ro"
+      else
+          echo -e "${Y}⚠️  No local Claude auth found, will need to login in container${N}"
+          CLAUDE_AUTH_MOUNT=""
+      fi
+      
       # Run container as root initially to set up, then drop privileges for claude
       docker run -it --rm \\
           --name "klaude-${PROJECT_NAME//[^a-zA-Z0-9]/-}-$$" \\
           --hostname "klaude" \\
           --privileged \\
           -v "$WORKSPACE":/workspace \\
+          $CLAUDE_AUTH_MOUNT \\
           -w /workspace \\
           -e PATH=/usr/local/bin:/usr/bin:/bin \\
           klaude-image \\
           bash -c \"
               # Give claude user access to the workspace
               chown -R claude:claude /workspace
+              
+              # If auth is mounted, ensure proper permissions
+              if [ -d /home/claude/.config/claude ]; then
+                  echo '🔑 Using mounted host Claude authentication'
+                  # Ensure .config directory exists and has proper ownership
+                  mkdir -p /home/claude/.config
+                  chown claude:claude /home/claude/.config
+              else
+                  echo '🔑 No auth mounted, will need to login'
+              fi
               
               echo '✅ Container ready! Starting Claude Code in YOLO mode...'
               echo '    (Using --dangerously-skip-permissions safely in container)'
