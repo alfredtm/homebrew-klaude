@@ -123,7 +123,7 @@ class Klaude < Formula
                       echo "   ✓ Auth files copied"
                   fi
                   echo "✅ Starting Claude Code..."
-                  exec su claude -c "cd /workspace && claude --dangerously-skip-permissions"
+                  exec su claude -c "cd /workspace && echo 'Hello! Ready to help with your project.' | claude --dangerously-skip-permissions"
               '
       else
           docker run -it --rm \\
@@ -146,7 +146,7 @@ class Klaude < Formula
                   echo ''
                   
                   # Run as the existing claude user
-                  exec su claude -c 'cd /workspace && claude --dangerously-skip-permissions'
+                  exec su claude -c 'cd /workspace && echo "Hello! Ready to help with your project." | claude --dangerously-skip-permissions'
               \"
       fi
       
